@@ -1,6 +1,23 @@
 const urlModel = require('../models/urlModel')
 const shortUniqueId = require('short-unique-id')
 const isUrlValid = require('url-validation')
+const redis = require('redis')
+
+const { promisify } = require("util")
+// Connecting to redis -----------------------------------------------------------
+const redisClient = redis.createClient(
+    18708,
+    "redis-18708.c264.ap-south-1-1.ec2.cloud.redislabs.com", { no_ready_check: true }
+);
+redisClient.auth("c4wumzAqu1aqeSjGmtoGJ65S3kUkwtdT", function (err) {
+    if (err) throw err;
+});
+redisClient.on("connect", async function () {
+    console.log("Connected to Redis..Let's GO");
+});
+//Connection setup for redis
+const SET_ASYNC = promisify(redisClient.SET).bind(redisClient);
+const GET_ASYNC = promisify(redisClient.GET).bind(redisClient);
 
 const isValid = function (value) {
     if (typeof value == 'undefined' || value == null) return false
@@ -32,11 +49,19 @@ const urlShortener = async function (req, res) {
         }
         // validation Ends
 
+        let cahcedUrlData = await GET_ASYNC(`${longUrl}`)
+        if (cahcedUrlData) {
+
+            const urlDetails = JSON.parse(cahcedUrlData)
+            return res.status(200).send({ satus: true, data: urlDetails })
+        }
+
         const isShortUrlAlreadyAvailable = await urlModel.findOne({ longUrl })
 
         if (isShortUrlAlreadyAvailable) {
             const { longUrl, shortUrl, urlCode } = isShortUrlAlreadyAvailable
             const urlDetails = { longUrl, shortUrl, urlCode }
+            await SET_ASYNC(`${longUrl}`, JSON.stringify(urlDetails))
             return res.status(200).send({ satus: true, data: urlDetails })
         }
 
@@ -48,7 +73,7 @@ const urlShortener = async function (req, res) {
         const newUrl = await urlModel.create(urlDetails)
         const resUrl = { longUrl: newUrl.longUrl, shortUrl, urlCode }
 
-
+        await SET_ASYNC(`${longUrl}`, JSON.stringify(resUrl))
         return res.status(200).send({ satus: true, data: resUrl })
     } catch (err) {
         return res.status(500).send({ status: false, message: err.message })
@@ -57,19 +82,26 @@ const urlShortener = async function (req, res) {
 }
 const getUrl = async function (req, res) {
     try {
-      urlCode = req.params.urlCode
-      
-      const urlDetails = await urlModel.findOne({urlCode})
-      if(!urlDetails) {
-          res.status(400).send({status:false, message : `Page not found`})
-          return
-      }
-      const longUrl = urlDetails.longUrl
-       res.status(200).redirect(longUrl)
-       return
+        urlCode = req.params.urlCode
+        let cahcedUrlData = await GET_ASYNC(`${urlCode}`)
+        if (cahcedUrlData) {
+            const longUrl = JSON.parse(cahcedUrlData)
+            res.status(200).redirect(longUrl)
+            return
+        }
+
+        const urlDetails = await urlModel.findOne({ urlCode })
+        if (!urlDetails) {
+            res.status(400).send({ status: false, message: `Page not found` })
+            return
+        }
+        const longUrl = urlDetails.longUrl
+        await SET_ASYNC(`${urlCode}`, JSON.stringify(longUrl))
+        res.status(200).redirect(longUrl)
+        return
 
     } catch (err) {
-        return res.status(500).send({ status: false, message: err.message }) 
+        return res.status(500).send({ status: false, message: err.message })
     }
 }
 
