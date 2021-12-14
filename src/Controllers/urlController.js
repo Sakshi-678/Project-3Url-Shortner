@@ -37,12 +37,13 @@ const urlShortener = async function (req, res) {
             res.status(400).send({ status: false, message: 'Invalid request parameters. Please provide url details' })
             return
         }
-        const { longUrl } = requestBody  // destructuring
 
-        if (!isValid(longUrl)) {
+        if (!isValid(requestBody.longUrl)) {
             res.status(400).send({ status: false, message: "longUrl is required" })
             return
         }
+        const  longUrl  = String.prototype.trim.call(requestBody.longUrl) 
+
         if (!isUrlValid(longUrl.trim())) {
             res.status(400).send({ status: false, message: "longUrl is not valid, Please provide valid url" })
             return
@@ -71,10 +72,9 @@ const urlShortener = async function (req, res) {
         const shortUrl = "http://localhost:3000/" + urlCode
         const urlDetails = { longUrl, shortUrl, urlCode }
         const newUrl = await urlModel.create(urlDetails)
-        const resUrl = { longUrl: newUrl.longUrl, shortUrl, urlCode }
 
-        await SET_ASYNC(`${longUrl}`, JSON.stringify(resUrl))
-        return res.status(200).send({ satus: true, data: resUrl })
+        await SET_ASYNC(`${longUrl}`, JSON.stringify(urlDetails))
+        return res.status(201).send({ satus: true, data: urlDetails })
     } catch (err) {
         return res.status(500).send({ status: false, message: err.message })
     }
@@ -86,18 +86,18 @@ const getUrl = async function (req, res) {
         let cahcedUrlData = await GET_ASYNC(`${urlCode}`)
         if (cahcedUrlData) {
             const longUrl = JSON.parse(cahcedUrlData)
-            res.status(200).redirect(longUrl)
+            res.status(303).redirect(longUrl)
             return
         }
 
         const urlDetails = await urlModel.findOne({ urlCode })
         if (!urlDetails) {
-            res.status(400).send({ status: false, message: `Page not found` })
+            res.status(404).send({ status: false, message: `Page not found` })
             return
         }
         const longUrl = urlDetails.longUrl
         await SET_ASYNC(`${urlCode}`, JSON.stringify(longUrl))
-        res.status(200).redirect(longUrl)
+        res.status(303).redirect(longUrl)
         return
 
     } catch (err) {
