@@ -6,10 +6,10 @@ const redis = require('redis')
 const { promisify } = require("util")
 // Connecting to redis -----------------------------------------------------------
 const redisClient = redis.createClient(
-    18708,
-    "redis-18708.c264.ap-south-1-1.ec2.cloud.redislabs.com", { no_ready_check: true }
+    18045,
+    "redis-18045.c281.us-east-1-2.ec2.cloud.redislabs.com:18045", { no_ready_check: true }
 );
-redisClient.auth("c4wumzAqu1aqeSjGmtoGJ65S3kUkwtdT", function (err) {
+redisClient.auth("n7KH7rCGSZhnt9EBgtpom7AmHXeSeRIl", function (err) {
     if (err) throw err;
 });
 redisClient.on("connect", async function () {
