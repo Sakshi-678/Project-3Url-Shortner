@@ -3,18 +3,20 @@ const shortUniqueId = require('short-unique-id')
 const isUrlValid = require('url-validation')
 const redis = require('redis')
 
+
 const { promisify } = require("util")
 // Connecting to redis -----------------------------------------------------------
 const redisClient = redis.createClient(
-    18045,
-    "redis-18045.c281.us-east-1-2.ec2.cloud.redislabs.com:18045", { no_ready_check: true }
+    17878,
+    "redis-17878.c273.us-east-1-2.ec2.cloud.redislabs.com", { no_ready_check: true }
 );
-redisClient.auth("n7KH7rCGSZhnt9EBgtpom7AmHXeSeRIl", function (err) {
+redisClient.auth("XXW9zzurxGDiNiMQIaIarNv0tVPNpTre", function (err) {
     if (err) throw err;
 });
 redisClient.on("connect", async function () {
     console.log("Connected to Redis..Let's GO");
 });
+
 //Connection setup for redis
 const SET_ASYNC = promisify(redisClient.SET).bind(redisClient);
 const GET_ASYNC = promisify(redisClient.GET).bind(redisClient);
@@ -86,7 +88,7 @@ const getUrl = async function (req, res) {
         let cahcedUrlData = await GET_ASYNC(`${urlCode}`)
         if (cahcedUrlData) {
             const longUrl = JSON.parse(cahcedUrlData)
-            res.status(303).redirect(longUrl)
+            res.status(302).redirect(longUrl)
             return
         }
 
@@ -97,7 +99,7 @@ const getUrl = async function (req, res) {
         }
         const longUrl = urlDetails.longUrl
         await SET_ASYNC(`${urlCode}`, JSON.stringify(longUrl))
-        res.status(303).redirect(longUrl)
+        res.status(302).redirect(longUrl)
         return
 
     } catch (err) {
